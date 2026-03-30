@@ -1,0 +1,50 @@
+{% extends 'core/base.html' %}
+{% block title %}Delete Note — NoteVault{% endblock %}
+
+{% block extra_css %}
+<style>
+    .delete-wrap {
+        max-width: 480px;
+        margin: 5rem auto;
+        padding: 0 1rem;
+        text-align: center;
+    }
+    .delete-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .delete-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.5rem;
+        font-weight: 800;
+        margin-bottom: 0.5rem;
+    }
+    .note-preview {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        margin: 1.5rem 0;
+        text-align: left;
+    }
+    .delete-actions { display: flex; gap: 0.75rem; justify-content: center; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="delete-wrap">
+    <div class="delete-icon">🗑️</div>
+    <div class="delete-title">Delete this note?</div>
+    <p style="color:var(--muted);font-size:0.9rem;">This action cannot be undone.</p>
+
+    <div class="note-preview">
+        <div style="font-family:'Syne',sans-serif;font-weight:700;margin-bottom:0.5rem;">{{ note.title }}</div>
+        <div style="color:var(--muted);font-size:0.875rem;">{{ note.content|truncatewords:20 }}</div>
+    </div>
+
+    <div class="delete-actions">
+        <form method="post">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-danger">Yes, Delete</button>
+        </form>
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Cancel</a>
+    </div>
+</div>
+{% endblock %}

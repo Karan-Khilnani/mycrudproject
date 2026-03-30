@@ -1,0 +1,201 @@
+{% extends 'core/base.html' %}
+{% block title %}Dashboard — NoteVault{% endblock %}
+
+{% block extra_css %}
+<style>
+    .dash-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 2rem;
+        flex-wrap: wrap;
+        gap: 1rem;
+    }
+    .dash-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.75rem;
+        font-weight: 800;
+    }
+    .stats { display: flex; gap: 1rem; margin-bottom: 2rem; flex-wrap: wrap; }
+    .stat-card {
+        flex: 1; min-width: 140px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        text-align: center;
+    }
+    .stat-num { font-family: 'Syne', sans-serif; font-size: 2rem; font-weight: 800; color: var(--accent); }
+    .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
+
+    .filters {
+        display: flex; gap: 0.75rem;
+        margin-bottom: 1.5rem;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+    .search-input {
+        flex: 1; min-width: 200px;
+        padding: 0.6rem 0.9rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.875rem;
+    }
+    .search-input:focus { outline: none; border-color: var(--accent); }
+    .filter-select {
+        padding: 0.6rem 0.9rem;
+        background: var(--surface2);
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        color: var(--text);
+        font-family: 'DM Sans', sans-serif;
+        font-size: 0.875rem;
+        cursor: pointer;
+    }
+    .filter-select:focus { outline: none; border-color: var(--accent); }
+
+    .notes-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1rem;
+    }
+    .note-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: 12px;
+        padding: 1.25rem;
+        transition: border-color 0.2s, transform 0.2s;
+        position: relative;
+    }
+    .note-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+    .note-card.pinned { border-color: rgba(250,224,109,0.4); }
+    .pin-badge {
+        position: absolute; top: 0.75rem; right: 0.75rem;
+        font-size: 0.75rem;
+        color: var(--yellow);
+        background: rgba(250,224,109,0.1);
+        border: 1px solid rgba(250,224,109,0.3);
+        border-radius: 4px;
+        padding: 0.15rem 0.4rem;
+    }
+    .note-title {
+        font-family: 'Syne', sans-serif;
+        font-size: 1rem;
+        font-weight: 700;
+        margin-bottom: 0.5rem;
+        padding-right: 3rem;
+    }
+    .note-content {
+        font-size: 0.875rem;
+        color: var(--muted);
+        line-height: 1.6;
+        margin-bottom: 1rem;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    .note-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.75rem;
+        color: var(--muted);
+    }
+    .cat-badge {
+        padding: 0.2rem 0.5rem;
+        border-radius: 4px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    .cat-personal { background: rgba(124,109,250,0.15); color: var(--accent); }
+    .cat-work     { background: rgba(109,250,160,0.15); color: var(--green); }
+    .cat-idea     { background: rgba(250,224,109,0.15); color: var(--yellow); }
+    .cat-other    { background: rgba(136,136,150,0.15); color: var(--muted); }
+    .note-actions { display: flex; gap: 0.4rem; }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--muted);
+    }
+    .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-title { font-family: 'Syne', sans-serif; font-size: 1.25rem; color: var(--text); margin-bottom: 0.5rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="dash-header">
+        <div>
+            <div class="dash-title">Your Notes</div>
+            <div style="color:var(--muted);font-size:0.875rem;">{{ user.first_name|default:user.username }}'s personal workspace</div>
+        </div>
+        <a href="{% url 'note_create' %}" class="btn btn-primary">+ New Note</a>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats">
+        <div class="stat-card">
+            <div class="stat-num">{{ total }}</div>
+            <div class="stat-label">Total Notes</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" style="color:var(--yellow);">{{ pinned }}</div>
+            <div class="stat-label">Pinned</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-num" style="color:var(--green);">{{ notes.count }}</div>
+            <div class="stat-label">Showing</div>
+        </div>
+    </div>
+
+    <!-- Filters -->
+    <form method="get" class="filters">
+        <input type="text" name="q" value="{{ query }}" placeholder="Search notes..." class="search-input"/>
+        <select name="category" class="filter-select" onchange="this.form.submit()">
+            <option value="">All Categories</option>
+            {% for val, label in categories %}
+            <option value="{{ val }}" {% if category == val %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+        </select>
+        <button type="submit" class="btn btn-secondary">Search</button>
+        {% if query or category %}
+        <a href="{% url 'dashboard' %}" class="btn btn-secondary">Clear</a>
+        {% endif %}
+    </form>
+
+    <!-- Notes Grid -->
+    {% if notes %}
+    <div class="notes-grid">
+        {% for note in notes %}
+        <div class="note-card {% if note.is_pinned %}pinned{% endif %}">
+            {% if note.is_pinned %}<span class="pin-badge">📌 Pinned</span>{% endif %}
+            <div class="note-title">{{ note.title }}</div>
+            <div class="note-content">{{ note.content }}</div>
+            <div class="note-meta">
+                <span class="cat-badge cat-{{ note.category }}">{{ note.get_category_display }}</span>
+                <div class="note-actions">
+                    <a href="{% url 'note_update' note.pk %}" class="btn btn-secondary btn-sm">Edit</a>
+                    <a href="{% url 'note_delete' note.pk %}" class="btn btn-danger btn-sm">Delete</a>
+                </div>
+            </div>
+            <div style="font-size:0.7rem;color:var(--muted);margin-top:0.5rem;">
+                Updated {{ note.updated_at|date:"M d, Y" }}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <div class="empty-icon">📝</div>
+        <div class="empty-title">{% if query or category %}No notes found{% else %}No notes yet{% endif %}</div>
+        <p style="margin-bottom:1.5rem;">{% if query or category %}Try a different search or category{% else %}Create your first note to get started{% endif %}</p>
+        <a href="{% url 'note_create' %}" class="btn btn-primary">+ Create Note</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
