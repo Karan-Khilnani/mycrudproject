@@ -26,11 +26,27 @@ jobs:
       - uses: actions/checkout@v4
 
       # Runs a single command using the runners shell
-      - name: Run a one-line script
-        run: echo Hello, world!
+      - name: Deploy to aws
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{secrets.AWS_EC2_IP}}
+          username: ${{secrets.AWS_EC2_USER}}
+          script: |
+            cd /home/ubuntu/mycrudproject  
+         
+            #we need to pull our code 
+            git pull origin main
+
+            #install dependiciencies
+            pip install -r requirement.txt
+
+            #migrate the models in database
+            pyton3 manage.py migrate
+
+            #restart gunicorn  to restart the server 
+            sudo systemctl restart gunicorn
 
       # Runs a set of commands using the runners shell
-      - name: Run a multi-line script
-        run: |
-          echo Add other actions to build,
-          echo test, and deploy your project.
+     
+      
+     
